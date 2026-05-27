@@ -42,7 +42,7 @@ public class ProductStock extends BaseTimeEntity implements Purchasable {
         fetch = FetchType.LAZY,
         cascade = CascadeType.ALL,
         orphanRemoval = true)
-    private List<ProductAttributeValueStock> values = new ArrayList<>(); // 상품 선택 항목에 대해 선택된 값
+    private final List<ProductAttributeValueStock> values = new ArrayList<>(); // 상품 선택 항목에 대해 선택된 값
 
     protected ProductStock(Product product) {
         this.product = product;
