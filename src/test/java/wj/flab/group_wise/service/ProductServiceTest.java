@@ -1,6 +1,7 @@
 package wj.flab.group_wise.service;
 
 import java.util.List;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,7 @@ class ProductServiceTest {
 
         // then : 상품 중복 추가시 예외 반환
         Assertions.assertThatThrownBy(() -> productService.createProduct(productCreateRequest))
-            .isInstanceOf(AlreadyExistsException.class);
+                .isInstanceOf(AlreadyExistsException.class);
     }
 
     @Test
@@ -98,8 +99,8 @@ class ProductServiceTest {
         List<ProductStock> updatedStocks = updatedProduct.getProductStocks();
         int updatedStockSize = updatedStocks.size();
         int updatedStockQuantity = updatedStocks.stream()
-            .mapToInt(ProductStock::getStockQuantity)
-            .sum();
+                .mapToInt(ProductStock::getStockQuantity)
+                .sum();
 
         Assertions.assertThat(updatedStockSize).isEqualTo(3); // 9개 중 3개만 남음 (i % 4 == 0)
         Assertions.assertThat(updatedStockQuantity).isEqualTo(3 * 5); // 9개 중 3개만 남음 (각 재고 수량 5로 설정)
@@ -116,8 +117,8 @@ class ProductServiceTest {
         List<ProductStock> stocks = product.getProductStocks();
         int originalStockSize = stocks.size();
         int originalStockQuantity = stocks.stream()
-            .mapToInt(ProductStock::getStockQuantity)
-            .sum();
+                .mapToInt(ProductStock::getStockQuantity)
+                .sum();
 
         List<StockAddRequest> stockAddRequests = productDomainDtoCreator.createStocksToUpdate(stocks);
         productService.addProductStock(productId, new ProductStockAddRequest(stockAddRequests));
@@ -128,8 +129,8 @@ class ProductServiceTest {
 
         int updatedStockSize = updatedProduct.getProductStocks().size();
         int updatedStockQuantity = updatedProduct.getProductStocks().stream()
-            .mapToInt(ProductStock::getStockQuantity)
-            .sum();
+                .mapToInt(ProductStock::getStockQuantity)
+                .sum();
 
         Assertions.assertThat(updatedStockSize).isEqualTo(originalStockSize);
         Assertions.assertThat(updatedStockQuantity).isEqualTo(originalStockQuantity + expectedQuantityChange);
@@ -154,15 +155,15 @@ class ProductServiceTest {
         List<AttributeDeleteRequest> attrsToDelete = productDomainDtoCreator.createAttrsToDelete(product.getProductAttributes().get(1)); // 속성 1개 삭제
 
         productService.updateProductDetails(productId,
-            new ProductDetailUpdateRequest(
-                "seller",
-                "productName",
-                10000,
-                SaleStatus.PREPARE,
-                attrsToCreate,
-                attrsToUpdate,
-                attrsToDelete
-            ));
+                new ProductDetailUpdateRequest(
+                        "seller",
+                        "productName",
+                        10000,
+                        SaleStatus.PREPARE,
+                        attrsToCreate,
+                        attrsToUpdate,
+                        attrsToDelete
+                ));
 
         // then: 상품 상세 정보가 예상대로 수정되었는지 확인
         Product updatedProduct = productRepository.findById(productId).get();
@@ -173,8 +174,8 @@ class ProductServiceTest {
 
         // ProductStock 개수 확인하기
         int expectedStockSize = updatedAttrs.stream()
-            .mapToInt(attr -> attr.getValues().size())
-            .reduce(1, (a, b) -> a * b); // 모든 속성값의 조합 수
+                .mapToInt(attr -> attr.getValues().size())
+                .reduce(1, (a, b) -> a * b); // 모든 속성값의 조합 수
         Assertions.assertThat(updatedProduct.getProductStocks().size()).isEqualTo(expectedStockSize);
 
     }
@@ -191,6 +192,43 @@ class ProductServiceTest {
 
         // then: 상품이 삭제되었는지 확인
         Assertions.assertThat(productRepository.findById(productId)).isEmpty();
+    }
+
+    @Test
+    void 여러_속성_중_첫번째만_값_추가해도_재고_재생성된다() {
+        // given : 상품 추가 후 상품 재고 정보 확인 (2개의 속성, 각 속성당 3개의 값 -> 총 9개의 재고 생성됨)
+        ProductCreateRequest productCreateRequest = productDomainDtoCreator.createProductToCreate(2, 3);
+        Long productId = productService.createProduct(productCreateRequest);
+        Product product = productService.findProductById(productId);
+        int previousStockSize = product.getProductStocks().size();
+        Assertions.assertThat(previousStockSize).isEqualTo(9);
+
+        // when : 상품 속성 중 첫번째 속성에 값 1개 추가
+        Long attrId = product.getProductAttributes().get(0).getId();
+        productService.updateProductDetails(productId,
+                new ProductDetailUpdateRequest(
+                        "seller",
+                        "productName",
+                        10000,
+                        SaleStatus.PREPARE,
+                        List.of(),
+                        List.of(new AttributeUpdateRequest(
+                                attrId,
+                                "updatedAttrName",
+                                List.of(new AttributeCreateRequest.AttributeValueCreateRequest(
+                                        "newValue",
+                                        1000
+                                )),
+                                List.of(),
+                                List.of()
+                        )),
+                        List.of()
+                ));
+
+        // then: 재고조합이 12개가 된다
+        Product updatedProduct = productService.findProductById(productId);
+        int updatedStockSize = updatedProduct.getProductStocks().size();
+        Assertions.assertThat(updatedStockSize).isEqualTo(12);
     }
 
 }
