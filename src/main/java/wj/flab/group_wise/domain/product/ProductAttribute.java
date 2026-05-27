@@ -52,7 +52,7 @@ public class ProductAttribute extends BaseTimeEntity implements ContainerOfValue
         fetch = FetchType.LAZY,
         cascade = CascadeType.ALL,
         orphanRemoval = true)
-    private List<ProductAttributeValue> values = new ArrayList<>();    // 옵션목록
+    private final List<ProductAttributeValue> values = new ArrayList<>();    // 옵션목록
 
     @Override
     // todo 어떻게 적절하게 보호할까
@@ -76,18 +76,11 @@ public class ProductAttribute extends BaseTimeEntity implements ContainerOfValue
         });
     }
 
-    protected boolean updateValues(List<AttributeValueUpdateRequest> valuesToUpdate) {
-        boolean differenceFoundInAdditionalPrice = false;
-
+    protected void updateValues(List<AttributeValueUpdateRequest> valuesToUpdate) {
         for (AttributeValueUpdateRequest valueToUpdate : valuesToUpdate) {
             ProductAttributeValue value = getProductAttributeValue(valueToUpdate.productAttributeValueId());
-            if (value.getAdditionalPrice() != valueToUpdate.additionalPrice()) {
-                differenceFoundInAdditionalPrice = true;
-            }
             value.update(valueToUpdate.attributeValueName(), valueToUpdate.additionalPrice());
         }
-
-        return differenceFoundInAdditionalPrice;
     }
 
     protected void removeValues(List<AttributeValueDeleteRequest> valuesToRemove) {

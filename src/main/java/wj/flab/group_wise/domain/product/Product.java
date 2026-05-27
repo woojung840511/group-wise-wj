@@ -65,14 +65,14 @@ public class Product extends BaseTimeEntity {
         fetch = FetchType.LAZY,
         cascade = CascadeType.ALL,
         orphanRemoval = true)
-    private List<ProductAttribute> productAttributes = new ArrayList<>();  // 상품의 선택항목
+    private final List<ProductAttribute> productAttributes = new ArrayList<>();  // 상품의 선택항목
 
     @OneToMany(
         mappedBy = "product",
         fetch = FetchType.LAZY,
         cascade = CascadeType.ALL,
         orphanRemoval = true)
-    private List<ProductStock> productStocks = new ArrayList<>();           // 상품의 선택항목 조합에 따른 재고
+    private final List<ProductStock> productStocks = new ArrayList<>();           // 상품의 선택항목 조합에 따른 재고
 
 
     public static Product createProduct(String seller, String productName, int basePrice) {
@@ -157,7 +157,7 @@ public class Product extends BaseTimeEntity {
     }
 
     private boolean updateAttributes(List<AttributeUpdateRequest> attrsToUpdate) {
-        boolean hasChangeInValue = false;
+        boolean hasChangeInValueComposition = false;
 
         for (AttributeUpdateRequest attr : attrsToUpdate) {
 
@@ -165,19 +165,19 @@ public class Product extends BaseTimeEntity {
             targetAttr.updateAttributeName(attr.attributeName());
 
             List<AttributeValueCreateRequest> newValues = attr.newAttributeValues();
-            List<AttributeValueUpdateRequest> updateValues = attr.updateAttributeValues();
             List<AttributeValueDeleteRequest> deleteValues = attr.deleteAttributeValuesIds();
+            List<AttributeValueUpdateRequest> updateValues = attr.updateAttributeValues();
 
-            boolean differenceFoundInAdditionalPrice = targetAttr.updateValues(updateValues);
             boolean hasValueToAppend = newValues != null && !newValues.isEmpty();
             boolean hasValueToDelete = deleteValues != null && !deleteValues.isEmpty();
+            targetAttr.updateValues(updateValues);
 
             if (hasValueToAppend) targetAttr.appendValues(newValues);
             if (hasValueToDelete) targetAttr.removeValues(deleteValues);
 
-            hasChangeInValue = differenceFoundInAdditionalPrice || hasValueToAppend || hasValueToDelete;
+            hasChangeInValueComposition |= hasValueToAppend || hasValueToDelete;
         }
-        return hasChangeInValue;
+        return hasChangeInValueComposition;
     }
 
     private void removeAttributes(List<AttributeDeleteRequest> attrDeleteIds) {
