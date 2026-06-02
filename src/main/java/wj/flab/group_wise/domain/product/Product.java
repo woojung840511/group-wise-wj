@@ -208,6 +208,9 @@ public class Product extends BaseTimeEntity {
     }
 
     public void addProductStocks(List<StockAddRequest> stockAddRequests) {
+        if (stockAddRequests == null || stockAddRequests.isEmpty()) {
+            return;
+        }
         stockAddRequests.forEach(stockDto -> {
             ProductStock targetStock = getTargetStock(stockDto.id());
             targetStock.addStockQuantity(stockDto.stockQuantityToBeAdded());
@@ -215,6 +218,9 @@ public class Product extends BaseTimeEntity {
     }
 
     public void setProductStocks(List<StockQuantitySetRequest> stockQuantitySetRequests) {
+        if (stockQuantitySetRequests == null || stockQuantitySetRequests.isEmpty()) {
+            return;
+        }
         stockQuantitySetRequests.forEach(stockDto -> {
             ProductStock targetStock = getTargetStock(stockDto.id());
             targetStock.setStockQuantity(stockDto.stockQuantityToSet());
@@ -222,6 +228,9 @@ public class Product extends BaseTimeEntity {
     }
 
     public void deleteProductStocks(List<StockDeleteRequest> stockDeleteRequests) {
+        if (stockDeleteRequests == null || stockDeleteRequests.isEmpty()) {
+            return;
+        }
         stockDeleteRequests.forEach(stockDto -> {
             ProductStock targetStock = getTargetStock(stockDto.id());
             productStocks.remove(targetStock);
