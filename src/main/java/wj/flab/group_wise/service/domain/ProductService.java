@@ -3,6 +3,8 @@ package wj.flab.group_wise.service.domain;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import wj.flab.group_wise.domain.exception.EntityNotFoundException;
@@ -28,6 +30,8 @@ public class ProductService {
     private final ProductValidator productValidator;
     private final ProductViewResponseMapper productViewResponseMapper;
 
+    // 조회용. 캐시에 있으면 메서드를 아예 실행 안하고 캐시값을 반환. 없으면 실행하고 결과를 캐시에 저장.
+    @Cacheable(value = "products", key = "#productId")
     public ProductViewResponse getProductInfo(Long productId) {
         Product product = findProductById(productId);
         return productViewResponseMapper.mapToProductViewResponse(product);
@@ -46,6 +50,8 @@ public class ProductService {
         return product;
     }
 
+    // 캐시 삭제. 데이터가 바뀌어서 캐시가 더 이상 유효하지 않으므로 삭제. 다음 조회 때 다시 캐시 생성.
+    @CacheEvict(value = "products", key = "#productId")
     public void setProductStock(Long productId, ProductStockSetRequest productToSetStock) {
         Product product = findProductById(productId);
         productValidator.validateProductLifeCycleBeforeMajorUpdate(product);
@@ -53,12 +59,14 @@ public class ProductService {
         product.deleteProductStocks(productToSetStock.stockDeleteRequests());
     }
 
+    @CacheEvict(value = "products", key = "#productId")
     public void addProductStock(Long productId, ProductStockAddRequest productToAddStock) {
         Product product = findProductById(productId);
         List<StockAddRequest> stockAddRequests = productToAddStock.stockAddRequests();
         product.addProductStocks(stockAddRequests);
     }
 
+    @CacheEvict(value = "products", key = "#productId")
     public void updateProductDetails(Long productId, ProductDetailUpdateRequest productToUpdate) {
         Product product = findProductById(productId);
         productValidator.validateProductLifeCycleBeforeMajorUpdate(product);
@@ -85,6 +93,7 @@ public class ProductService {
                 String.format("productStockId 가 %d 인 상품이 존재하지 않습니다.", productStockId)));
     }
 
+    @CacheEvict(value = "products", key = "#productId")
     public void deleteProduct(Long productId) {
         Product product = findProductById(productId);
         productValidator.validateProductLifeCycleBeforeMajorUpdate(product);
