@@ -19,12 +19,21 @@
 - ConcurrentMap → Redis 전환 후 동일 동작 확인
 - 관련 커밋: `6e1a3c0`
 
-## 다음 단계
+## 현재 진행 중
 
-### 4단계: Redis 활용 심화
-- 캐시 외 Redis 활용: 세션 저장소, 분산 락, 조회수 카운터 등
-- 공동구매 프로젝트에 맞는 활용 (예: 참여자 수 실시간 카운트)
-- Redis 장애 시 대응 (fallback, circuit breaker 개념)
+### 4단계: Redis 활용 심화 — 분산 락
+
+**문제 상황**: `GroupPurchaseService.joinGroupPurchase()`에서 재고 차감(`product.decreaseStockQuantity()`)과 참여자 추가가 동시에 호출될 때 Lost Update 발생 가능. 두 트랜잭션이 같은 시점의 재고를 읽고 각각 차감하면 재고 초과(overselling) 위험.
+
+**학습 목표**:
+- DB 비관적 락(SELECT FOR UPDATE), 낙관적 락(@Version)의 개념과 한계 이해
+- Redis 분산 락(Redisson)으로 여러 서버 환경에서의 동시성 제어 구현
+- 실무에서 어떤 상황에 어떤 방식을 선택하는지 판단 기준 학습
+
+**이후 후보 주제**:
+- 실시간 카운터 (참여자 수 Redis 카운트)
+- Redis Pub/Sub (스케줄러 폴링 → 이벤트 기반 전환)
+- Redis 장애 대응 (fallback, circuit breaker)
 
 ## 현재 캐시 적용 현황
 - **대상**: ProductService (상품 조회/수정/삭제)
