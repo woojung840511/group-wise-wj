@@ -44,5 +44,6 @@ This is a **group purchasing (공동구매) service API** built with Spring Boot
 - **Auth**: Stateless JWT (1-hour expiry). `JwtAuthenticationFilter` runs before `UsernamePasswordAuthenticationFilter`.
 - **Async**: `notificationTaskExecutor` (5-15 threads, queue 100) handles notification delivery. CallerRunsPolicy as rejection handler.
 - **Batch fetching**: Global `default_batch_fetch_size: 100` to mitigate N+1 queries. All relationships use `FetchType.LAZY`.
+- **Cache**: Redis 기반 캐싱 (`spring-boot-starter-data-redis`). `CacheConfig`에서 RedisCacheManager 설정 (TTL 10분, JSON 직렬화). `ProductService`에 `@Cacheable`/`@CacheEvict` 적용 — 조회 시 캐시 히트, 수정/삭제 시 evict.
 - **Environment variables**: `DB_HOST`, `DB_NAME_PROD`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET_KEY` (loaded via spring-dotenv).
 - **Deployment**: Blue-green via GitHub Actions → EC2 with Nginx port switching (8080/8081).
