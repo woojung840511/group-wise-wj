@@ -30,6 +30,11 @@
 - Redis 분산 락(Redisson)으로 여러 서버 환경에서의 동시성 제어 구현
 - 실무에서 어떤 상황에 어떤 방식을 선택하는지 판단 기준 학습
 
+**진행 상황**:
+- DB 비관적 락 적용 완료 — GroupPurchase에 `PESSIMISTIC_WRITE` 적용 (커밋 완료)
+- DB 낙관적 락 적용 완료 — Product에 `@Version` 추가 (커밋 예정)
+- 다음: 동시성 테스트 작성 → Redis 분산 락(Redisson) 구현
+
 **이후 후보 주제**:
 - 실시간 카운터 (참여자 수 Redis 카운트)
 - Redis Pub/Sub (스케줄러 폴링 → 이벤트 기반 전환)
@@ -40,6 +45,20 @@
 - **캐시 키**: `products::{productId}`
 - **설정**: `CacheConfig.java` — RedisCacheManager, TTL 10분, JSON 직렬화
 - **어노테이션**: 조회 `@Cacheable`, 수정/삭제 `@CacheEvict`
+
+## 학습 TODO (4단계 병행)
+
+### 테스트 코드 작성
+- [ ] 동시성 테스트: `ExecutorService` + `CountDownLatch`로 멀티스레드 테스트 작성
+- [ ] 비관적 락 테스트: 재고 < 스레드 수 시나리오로 overselling 방지 검증
+- [ ] 낙관적 락 테스트: `OptimisticLockException` 발생 확인 및 재시도 없이 실패하는 케이스
+- [ ] 테스트 기초: 단위 테스트 vs 통합 테스트, 모킹(Mockito) 개념 학습
+
+### Java 동시성 기초
+- [ ] `ExecutorService`: 스레드풀 생성과 관리
+- [ ] `CountDownLatch`: 스레드 동시 시작 보장 메커니즘
+- [ ] `AtomicInteger` 등 thread-safe 카운터
+- [ ] `Future` / `CompletableFuture`: 비동기 결과 수집
 
 ## 기술 결정 사항
 - Caffeine은 건너뛰고 Redis로 직행 (로컬 캐시 원리는 ConcurrentMap으로 충분히 이해)
