@@ -1,4 +1,4 @@
-# 분산락에 대한 고민
+# 동시성 이슈와 여러가지 해결 방안 탐색
 
 ## GroupPurchaseService.joinGroupPurchase()에서 발생할 수 있는 문제
 - `product.decreaseStockQuantity()`에서 재고 차감과 참여자 추가가 동시에 호출될 때 Lost Update 발생 가능
@@ -60,8 +60,11 @@ SELECT * FROM product_stock WHERE id = 1;
 -- 비관적 락 SELECT (해당 row에 배타적 잠금 획득)
 SELECT * FROM product_stock WHERE id = 1 FOR UPDATE;
 ```
-
-`FOR UPDATE`를 붙이면 해당 row에 배타적 잠금(exclusive lock)이 걸린다.
+- 잠금이 걸린 row는 다른 트랜잭션에서 읽거나 수정하려고 하면 대기 상태가 된다.
+  - 예: 트랜잭션 A가 `SELECT ... FOR UPDATE`로 product_stock을 잠그면, 트랜잭션 B가 같은 row를 읽거나 수정하려고 하면 A가 커밋될 때까지 대기한다.
+- `FOR UPDATE`를 붙이면 해당 row에 배타적 잠금(exclusive lock)이 걸린다.
+- FK 로 잠긴 행을 참조하는 다른 테이블의 row는 잠기지 않는다.
+  - 예: product 행에 SELECT FOR UPDATE 걸어도 product_stock 행은 잠기지 않는다.
 
 ```
 스레드 A                              스레드 B
@@ -100,3 +103,23 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
 | 성능       | 락을 기다리는 동안 스레드가 블로킹되므로 동시 처리량이 줄어듦                  |
 | 락 범위    | 트랜잭션이 끝날 때까지 유지되므로 트랜잭션을 짧게 가져가야 함                  |
 | 타임아웃   | 무한 대기를 막기 위해 @QueryHints로 lock timeout 설정 권장                  |
+
+### 실제 적용하면서 고려한 점 기록 (그리고 DDD 구조와 락) 2026-06-05
+- groupPurchaseService.joinGroupPurchase()에서 ProductStock을 조회할 때 `findByIdWithUpdate()`로 GroupPurchase에 락을 걸어서 재고 차감 시 동시성 문제 해결했다.
+  - 공동구매 참여 로직에서 변경이 일어나는 테이블은, 
+    - group_purchase.id 참조하는 group_purchase_member
+    - group_purchase_member.id 참조하는 product 의 id를 참조하는 product_stock 이다.
+- 배타적 락을 적용한 테이블은 GroupPurchase 이다. 그 이유는:
+  - 각 변경 테이블에 직접 락을 걸 수도 있겠지만, joinGroupPurchase()에서 가장 먼저 조회하는 테이블이 GroupPurchase 이었다.
+  - 빠른 락 획득으로 이후 로직(member, stock 조회 및 수정)을 다른 트랜젝션으로부터 자연스럽게 전부 보호할 수 있었다.
+  - 또한 DDD 구조로 member 와 productStock 의 조회가 각각 groupPurchase 와 Product 엔티티에서 일어나기 때문에, 직접적으로 각 테이블에 락을 걸기 위해선 DDD 구조를 풀어야 하는 상황이었다.
+  - 결과적으로 GroupPurchase 엔티티에 배타적 락을 걸어서, joinGroupPurchase() 메서드 전체가 하나의 트랜잭션으로 묶이게 되었고, 이로 인해 동시성 문제를 효과적으로 해결할 수 있었다.
+  - 다만 Aggregate Root에 락을 걸면, 경합 범위가 넓어지는 트레이드 오프가 있을 수 있다.
+
+### 락 전략 단계 정리
+| 단계 | 전략                            |
+|----|-------------------------------|
+| 기본 | Aggregate Root에 배타적 락 (지금 접근) |
+| 성능 이슈 발생 시 | 경합 엔티티에 낙관적 락 (@Version) 추가   |
+| 분산 환경 / 고트래픽 | Redis 기반 분산 락 Aggregate 단위 잠금 |
+| 극단적 트래픽 | DDD 경계를 조정하거나, CQRS 쓰기 모델 분리 |
