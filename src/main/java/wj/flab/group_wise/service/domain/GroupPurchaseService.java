@@ -202,7 +202,7 @@ public class GroupPurchaseService {
     }
 
     public GroupPurchase findGroupPurchaseWithLock(Long groupPurchaseId) {
-        return groupPurchaseRepository.findByIdWithUpdate(groupPurchaseId)
+        return groupPurchaseRepository.findByIdWithLock(groupPurchaseId)
             .orElseThrow(() -> new EntityNotFoundException(TargetEntity.GROUP_PURCHASE, groupPurchaseId));
     }
 

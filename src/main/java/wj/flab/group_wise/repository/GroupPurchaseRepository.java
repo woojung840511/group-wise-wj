@@ -19,7 +19,7 @@ public interface GroupPurchaseRepository extends JpaRepository<GroupPurchase, Lo
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select gp from GroupPurchase gp where gp.id = :id")
-    Optional<GroupPurchase> findByIdWithUpdate(Long id);
+    Optional<GroupPurchase> findByIdWithLock(Long id);
 
     @Query("SELECT gp FROM GroupPurchase gp "
         + "JOIN Product p ON gp.productId = p.id "

@@ -104,8 +104,8 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
 | 락 범위    | 트랜잭션이 끝날 때까지 유지되므로 트랜잭션을 짧게 가져가야 함                  |
 | 타임아웃   | 무한 대기를 막기 위해 @QueryHints로 lock timeout 설정 권장                  |
 
-### 실제 적용하면서 고려한 점 기록 (그리고 DDD 구조와 락) 2026-06-05
-- groupPurchaseService.joinGroupPurchase()에서 ProductStock을 조회할 때 `findByIdWithUpdate()`로 GroupPurchase에 락을 걸어서 재고 차감 시 동시성 문제 해결했다.
+### 비관적 락을 실제 적용하면서 고려한 점 기록 (그리고 DDD 구조와 락) 2026-06-05
+- groupPurchaseService.joinGroupPurchase()에서 ProductStock을 조회할 때 `findByIdWithLock()`로 GroupPurchase에 락을 걸어서 재고 차감 시 동시성 문제 해결했다.
   - 공동구매 참여 로직에서 변경이 일어나는 테이블은, 
     - group_purchase.id 참조하는 group_purchase_member
     - group_purchase_member.id 참조하는 product 의 id를 참조하는 product_stock 이다.
@@ -123,3 +123,24 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
 | 성능 이슈 발생 시 | 경합 엔티티에 낙관적 락 (@Version) 추가   |
 | 분산 환경 / 고트래픽 | Redis 기반 분산 락 Aggregate 단위 잠금 |
 | 극단적 트래픽 | DDD 경계를 조정하거나, CQRS 쓰기 모델 분리 |
+
+## 낙관적 락 살펴보기
+- 낙관적 락은 "내가 이 데이터를 수정할 때 다른 사람이 먼저 수정했는지 체크"하는 방식
+- 적용 방법:
+  - `@Version` 필드를 엔티티에 추가해서 사용한다.
+  - 트랜잭션이 커밋될 때, JPA가 `WHERE version = ?` 조건으로 업데이트 쿼리를 날리고, 영향받은 행이 0이면 `OptimisticLockException`을 던진다.
+  - 참고 - @Lock(LockModeType.OPTIMISTIC) 
+    - 조회 시점에 버전 체크하는 용도로, "이 트랜잭션에서 읽기만 해도 커밋 시점에 version이 변경되었는지 검증해라" 입니다. 즉 수정 없이 조회만
+      하는데도 다른 트랜잭션의 수정을 감지하고 싶을 때 쓰는 것이지, 수정하는 경우에는 @Version만으로 충분합니다.
+    - 조회 메서드에 선언 → 읽기만 하는 트랜잭션에서도 커밋 시점에 "내가 읽은 version이 아직 유효한가?" 검증
+  ```
+    // 상품 정보를 읽어서 화면에 보여주는 API
+    @Transactional(readOnly = true)
+    public ProductViewResponse getProductInfo(Long productId) {
+        Product product = productRepository.findByIdWithOptimisticLock(productId); // version=1 읽음
+        // ... 응답 조립하는 동안 다른 트랜잭션이 Product 수정 (version 1→2)
+        // 이 트랜잭션 커밋 시점에 version 불일치 감지 → OptimisticLockException
+    }
+  ```
+- 적합한 상황:
+  - 낙관적 락은 충돌이 드물 때 성능이 좋지만, 충돌이 잦으면 재시도가 필요해서 오히려 성능이 나빠질 수 있다.

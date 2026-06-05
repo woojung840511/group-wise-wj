@@ -74,6 +74,9 @@ public class Product extends BaseTimeEntity {
         orphanRemoval = true)
     private final List<ProductStock> productStocks = new ArrayList<>();           // 상품의 선택항목 조합에 따른 재고
 
+    @Version
+    Long version;
+
 
     public static Product createProduct(String seller, String productName, int basePrice) {
         return new Product(seller, productName, basePrice);
