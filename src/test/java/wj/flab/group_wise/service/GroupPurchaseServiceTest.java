@@ -3,6 +3,12 @@ package wj.flab.group_wise.service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -22,6 +28,7 @@ import wj.flab.group_wise.dto.groupPurchase.request.GroupPurchaseStats;
 import wj.flab.group_wise.dto.groupPurchase.request.GroupPurchaseUpdateRequest;
 import wj.flab.group_wise.dto.member.MemberCreateRequest;
 import wj.flab.group_wise.dto.product.request.ProductStockSetRequest;
+import wj.flab.group_wise.dto.product.response.ProductStockResponse;
 import wj.flab.group_wise.repository.GroupPurchaseRepository;
 import wj.flab.group_wise.service.domain.GroupPurchaseService;
 import wj.flab.group_wise.service.domain.MemberService;
@@ -44,6 +51,7 @@ class GroupPurchaseServiceTest {
 
     @Autowired
     private ProductDomainDtoCreator productDomainDtoCreator;
+
     @Autowired
     private MemberService memberService;
 
@@ -101,7 +109,7 @@ class GroupPurchaseServiceTest {
 
         // then : 공동구매 삭제 확인
         Assertions.assertThatThrownBy(() -> groupPurchaseService.findGroupPurchase(groupPurchaseId))
-            .isInstanceOf(EntityNotFoundException.class);
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test
@@ -138,13 +146,13 @@ class GroupPurchaseServiceTest {
         Long productId = setAndGetProductId();
         Long stockId = setAndGetProductStockId(productId);
         Long groupPurchaseId = setAndGetGroupPurchaseId(productId);
-        Long memberId = setAndGetMemberId();
+        Long memberId = setAndGetMemberId("member1");
 
         // when : 공동구매 참여
         groupPurchaseService.joinGroupPurchase(
-            groupPurchaseId,
-            memberId,
-            List.of(new GroupPurchaseJoinRequest(stockId, 1)));
+                groupPurchaseId,
+                memberId,
+                List.of(new GroupPurchaseJoinRequest(stockId, 1)));
 
         // then : 공동구매 참여 확인
         GroupPurchase groupPurchase = groupPurchaseService.findGroupPurchase(groupPurchaseId);
@@ -155,23 +163,26 @@ class GroupPurchaseServiceTest {
     private Long setAndGetProductId() {
         Long productId = productService.createProduct(productDomainDtoCreator.createProductToCreate(1, 1));
         Product product = productService.findProductById(productId);
-        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(productId, product.getProductStocks());
+        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(product.getProductStocks());
         productService.setProductStock(productId, productStockSetRequest);
         return productId;
     }
 
     private Long setAndGetProductStockId(Long productId) {
         Product product = productService.findProductById(productId);
-        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(productId, product.getProductStocks());
+        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(product.getProductStocks());
         productService.setProductStock(productId, productStockSetRequest);
 
         ProductStock stock = product.getProductStocks().get(0);
         return stock.getId();
     }
 
-    private Long setAndGetMemberId() {
+    private Long setAndGetMemberId(String email) {
         return memberService.registerMember(
-            new MemberCreateRequest("member1", "password1", "address"));
+                new MemberCreateRequest(
+                        email,
+                        "password1",
+                        "address"));
     }
 
     private Long setAndGetGroupPurchaseId(Long productId) {
@@ -183,23 +194,23 @@ class GroupPurchaseServiceTest {
 
     private static GroupPurchaseCreateRequest getGroupPurchaseCreateRequest(Long productId, String title) {
         return new GroupPurchaseCreateRequest(
-            title,
-            productId,
-            10,
-            10000,
-            LocalDateTime.now().plusDays(1),
-            LocalDateTime.now().plusDays(2)
+                title,
+                productId,
+                10,
+                10000,
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(2)
         );
     }
 
     private static GroupPurchaseUpdateRequest getGroupUpdateRequest(Long productId, String title) {
         return new GroupPurchaseUpdateRequest(
-            title,
-            productId,
-            20,
-            20,
-            LocalDateTime.now().plusDays(3),
-            LocalDateTime.now().plusDays(4)
+                title,
+                productId,
+                20,
+                20,
+                LocalDateTime.now().plusDays(3),
+                LocalDateTime.now().plusDays(4)
         );
     }
 }

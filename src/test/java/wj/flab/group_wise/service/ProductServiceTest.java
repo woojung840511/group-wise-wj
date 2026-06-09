@@ -91,7 +91,7 @@ class ProductServiceTest {
 
         // when: 재고 항목 수량을 1로 설정하거나, 재고 항목을 삭제
         Product product = productRepository.findById(productId).orElseThrow(() -> new AssertionError("상품이 생성되지 않았습니다"));
-        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(productId, product.getProductStocks());
+        ProductStockSetRequest productStockSetRequest = productDomainDtoCreator.createStockToSet(product.getProductStocks());
         productService.setProductStock(productId, productStockSetRequest);
 
         // then: 재고 개수와 재고량이 예상대로 변경되었는지 확인
