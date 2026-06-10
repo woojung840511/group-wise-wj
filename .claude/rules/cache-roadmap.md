@@ -54,6 +54,10 @@
 - [ ] 낙관적 락 테스트: `OptimisticLockException` 발생 확인 및 재시도 없이 실패하는 케이스
 - [ ] 테스트 기초: 단위 테스트 vs 통합 테스트, 모킹(Mockito) 개념 학습
 
+-### 예외 처리 개선 (후순위)
+- [ ] 커스텀 비즈니스 예외 계층 정의 (`BusinessException` → `OutOfStockException` 등)
+- [ ] 동시성 테스트에서 예상된 실패(재고 부족)와 예상치 못한 오류를 구분하도록 개선
+
 ### Java 동시성 기초
 - [ ] `ExecutorService`: 스레드풀 생성과 관리
 - [ ] `CountDownLatch`: 스레드 동시 시작 보장 메커니즘

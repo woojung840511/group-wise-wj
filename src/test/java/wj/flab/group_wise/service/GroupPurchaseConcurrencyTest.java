@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -56,40 +57,41 @@ public class GroupPurchaseConcurrencyTest {
         CountDownLatch readyLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(THREAD_COUNT);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(30);
-        executorService.submit(() -> {
-            try {
-                readyLatch.await(); // 모든 스레드가 준비될 때까지 대기
-                for (int i = 0; i < THREAD_COUNT; i++) {
-                    new Thread(() -> {
-                        try {
-                            Long memberId = setAndGetMemberId(UUID.randomUUID().toString());
-                            groupPurchaseService.joinGroupPurchase(
-                                    groupPurchaseId,
-                                    memberId,
-                                    List.of(new GroupPurchaseJoinRequest(stockId, 1))
-                            );
-                        } catch (Exception e) {
-                            log.error("참여 실패: {}", e.getMessage());
-                        } finally {
-                            doneLatch.countDown(); // 작업이 끝날 때마다 카운트 다운
-                        }
-                    }).start();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
+        AtomicInteger success = new AtomicInteger();
+        AtomicInteger fail = new AtomicInteger();
 
-        // then:
-        readyLatch.countDown();
+        ExecutorService executorService = Executors.newFixedThreadPool(30);
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            executorService.submit(() -> {
+                try {
+                    readyLatch.await(); // 모든 스레드가 여기서 대기
+
+                    Long memberId = setAndGetMemberId(UUID.randomUUID().toString());
+                    groupPurchaseService.joinGroupPurchase(
+                            groupPurchaseId,
+                            memberId,
+                            List.of(new GroupPurchaseJoinRequest(stockId, 1))
+                    );
+                    success.getAndIncrement();
+                } catch (Exception e) {
+                    log.error("참여 실패: {}", e.getMessage());
+                    fail.getAndIncrement();
+                } finally {
+                    doneLatch.countDown(); // 작업이 끝날 때마다 카운트 다운
+                }
+            });
+        }
+
+        // then: 남은 재고는 0, 참여성공은 100, 참여 실패는 50
+        readyLatch.countDown(); // 메인이 신호 -> 스레드 동시에 출발
         doneLatch.await(); // 모든 스레드가 작업을 마칠 때까지 대기
         executorService.shutdown();
 
         int leftStockQuantity = productService.getProductInfo(productId).productStocks()
                 .stream().mapToInt(ProductStockResponse::stockQuantity).sum();
         Assertions.assertThat(leftStockQuantity).isEqualTo(0);
-
+        Assertions.assertThat(success.get()).isEqualTo(STOCK_QUANTITY);
+        Assertions.assertThat(fail.get()).isEqualTo(THREAD_COUNT - STOCK_QUANTITY);
     }
 
     private Long setAndGetMemberId(String email) {
