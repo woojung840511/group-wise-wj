@@ -32,8 +32,21 @@
 
 **진행 상황**:
 - DB 비관적 락 적용 완료 — GroupPurchase에 `PESSIMISTIC_WRITE` 적용 (커밋 완료)
-- DB 낙관적 락 적용 완료 — Product에 `@Version` 추가 (커밋 예정)
-- 다음: 동시성 테스트 작성 → Redis 분산 락(Redisson) 구현
+- DB 낙관적 락 적용 완료 — Product에 `@Version` 추가 (커밋 완료)
+- 동시성 테스트 작성 완료 — `ExecutorService` + `CountDownLatch` + `AtomicInteger` (커밋 완료)
+- 다음: Redis 분산 락(Redisson) 학습 및 구현
+
+**분산 락 학습 순서**:
+1. Redis 선행 학습 (분산 락에 필요한 부분만)
+   - SETNX(SET NX): 키가 없을 때만 SET — 분산 락의 핵심 원리
+   - EXPIRE / TTL: 락 만료시간으로 데드락 방지
+   - 싱글 스레드 모델: Redis가 원자적 연산을 보장하는 근거
+   - Pub/Sub 기본 개념: Redisson이 락 해제 통지에 사용
+   - Lua 스크립트: 여러 명령을 원자적으로 실행 (Redisson 내부 동작)
+2. 분산 락 개념 이해 — 락의 조건(상호 배제, 데드락 방지, 장애 허용)
+3. Redisson 라이브러리 학습 — pub/sub 기반 대기, Watchdog 자동 연장 등
+4. 프로젝트에 적용 — `joinGroupPurchase()`에 Redisson 분산 락 적용
+5. 기존 DB 락과 비교 — 같은 동시성 테스트로 동작 검증, 차이점 정리
 
 **이후 후보 주제**:
 - 실시간 카운터 (참여자 수 Redis 카운트)
