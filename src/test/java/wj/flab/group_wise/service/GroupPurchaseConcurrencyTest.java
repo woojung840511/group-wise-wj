@@ -2,6 +2,7 @@ package wj.flab.group_wise.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +14,7 @@ import wj.flab.group_wise.dto.member.MemberCreateRequest;
 import wj.flab.group_wise.dto.product.request.ProductStockSetRequest;
 import wj.flab.group_wise.dto.product.response.ProductStockResponse;
 import wj.flab.group_wise.dto.product.response.ProductViewResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
 import wj.flab.group_wise.repository.GroupPurchaseRepository;
 import wj.flab.group_wise.service.domain.GroupPurchaseService;
 import wj.flab.group_wise.service.domain.MemberService;
@@ -42,6 +44,22 @@ public class GroupPurchaseConcurrencyTest {
 
     @Autowired
     private MemberService memberService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    // 이 테스트는 멀티스레드로 실제 커밋을 발생시키므로(@Transactional 롤백 불가),
+    // 같은 H2 인메모리 DB를 공유하는 다른 테스트가 오염되지 않도록 데이터를 직접 정리한다.
+    // JPA 캐스케이드 삭제는 매핑 FK를 NULL로 갱신하려다 제약 위반이 발생하므로 테이블을 직접 비운다.
+    @AfterEach
+    void cleanUp() {
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
+        List.of("group_purchase_item", "group_purchase_member", "notification", "group_purchase",
+                        "product_attribute_value_stock", "product_stock", "product_attribute_value",
+                        "product_attribute", "product", "member")
+                .forEach(table -> jdbcTemplate.execute("TRUNCATE TABLE " + table));
+        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
+    }
 
     @Test
     void 동시에_재고보다_많은_공동구매_참여요청이_들어와도_재고_수량이_음수가_되지_않고_재고수량이_0이_된_후에는_참여가_불가능해야_한다() throws InterruptedException {

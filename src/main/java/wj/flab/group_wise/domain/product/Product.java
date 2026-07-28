@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +74,9 @@ public class Product extends BaseTimeEntity {
         cascade = CascadeType.ALL,
         orphanRemoval = true)
     private final List<ProductStock> productStocks = new ArrayList<>();           // 상품의 선택항목 조합에 따른 재고
+
+    @Version
+    Long version;
 
 
     public static Product createProduct(String seller, String productName, int basePrice) {

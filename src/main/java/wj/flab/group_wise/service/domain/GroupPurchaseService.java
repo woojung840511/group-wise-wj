@@ -201,6 +201,11 @@ public class GroupPurchaseService {
             .orElseThrow(() -> new EntityNotFoundException(TargetEntity.GROUP_PURCHASE, groupPurchaseId));
     }
 
+    public GroupPurchase findGroupPurchaseWithLock(Long groupPurchaseId) {
+        return groupPurchaseRepository.findByIdWithLock(groupPurchaseId)
+            .orElseThrow(() -> new EntityNotFoundException(TargetEntity.GROUP_PURCHASE, groupPurchaseId));
+    }
+
     public void deleteGroupPurchase(Long groupPurchaseId) {
         GroupPurchase groupPurchase = findGroupPurchase(groupPurchaseId);
         if (!groupPurchase.isModifiable()) {
@@ -226,7 +231,7 @@ public class GroupPurchaseService {
 
     public void joinGroupPurchase(Long groupPurchaseId, Long memberId, List<GroupPurchaseJoinRequest> joinRequests) {
 
-        GroupPurchase groupPurchase = findGroupPurchase(groupPurchaseId);
+        GroupPurchase groupPurchase = findGroupPurchaseWithLock(groupPurchaseId);
         Product product = productService.findProductById(groupPurchase.getProductId());
 
         for (GroupPurchaseJoinRequest joinRequest : joinRequests) {

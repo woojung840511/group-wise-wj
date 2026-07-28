@@ -6,8 +6,10 @@ import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("!test")   // 테스트 환경(H2, Redis 미기동)에서는 Redisson 빈 생성 제외
 public class RedissonConfig {
 
     @Value("${spring.data.redis.host}")

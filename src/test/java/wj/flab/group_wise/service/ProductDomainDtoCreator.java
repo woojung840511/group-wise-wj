@@ -90,7 +90,7 @@ public class ProductDomainDtoCreator {
                     new AttributeValueDeleteRequest(valueToDelete.getId()))));
     }
 
-    ProductStockSetRequest createStockToSet(Long productId, List<ProductStock> productStocks) {
+    ProductStockSetRequest createStockToSet(List<ProductStock> productStocks) {
         List<StockQuantitySetRequest> stockQuantitySetRequests = new ArrayList<>();
         List<StockDeleteRequest> stockDeleteRequests = new ArrayList<>();
 
